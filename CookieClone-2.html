@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>CookieClone</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+/* messy kid-made styles */
+body{background:linear-gradient(135deg,#ffefd5,#ffe4e1);font-family:"Comic Sans MS",ComicSans,Segoe UI,Arial,serif;margin:0;padding:20px}
+.box{max-width:760px;margin:10px auto;padding:16px;background:#fff6eb;border:3px dashed #ff8c00;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+.header{display:flex;justify-content:space-between;align-items:center}
+h1{margin:0;color:#b34700;font-size:26px;text-shadow:1px 1px 0 #fff}
+.small{color:#8b5a2b;font-size:13px}
+.center{display:flex;gap:12px;align-items:center;justify-content:center;margin:18px 0}
+.cookie{width:150px;height:150px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff6d1,#f4b86b);display:flex;align-items:center;justify-content:center;font-size:66px;cursor:pointer;border:6px solid rgba(0,0,0,.03);box-shadow:0 8px 6px rgba(0,0,0,.06);user-select:none;-webkit-user-select:none;-moz-user-select:none;-webkit-touch-callout:none}
+.nums{font-weight:700;color:#6b2f00;text-align:center;margin-top:8px;font-size:20px}
+.items{display:flex;gap:10px;flex-wrap:wrap}
+.item{background:#fff1e6;padding:10px;border-radius:8px;border:1px solid #ffd6b3;flex:1 1 200px}
+.item b{display:block}
+.buy{background:#ff8c00;color:white;border:0;padding:8px 10px;border-radius:6px;cursor:pointer}
+.buy:disabled{opacity:.5}
+.footer{font-size:12px;color:#8b5a2b;text-align:center;margin-top:10px}
+kbd{background:#fff;border:1px solid #ddd;padding:2px 6px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="box" id="app">
+  <div class="header">
+    <div>
+      <h1>CookieClone (super noob ver)</h1>
+      <div class="small">click cookie or press <kbd>Space</kbd>. buy things. saves in localStorage maybe.</div>
+    </div>
+    <div class="small" id="cps">CPS: 0</div>
+  </div>
+
+  <div class="center">
+    <div>
+      <div class="cookie" id="cookie" draggable="false" aria-label="cookie">🍪</div>
+      <div class="nums" id="count">0</div>
+    </div>
+  </div>
+
+  <div class="items" id="items">
+    <div class="item">
+      <b>Cursor</b>
+      <div style="font-size:12px;color:#a0522d">+1 per click</div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;align-items:center">
+        <div>Owned: <span id="cursorCount">0</span></div>
+        <div>
+          <div style="font-size:12px;text-align:right">Price: <span id="cursorPrice">15</span></div>
+          <button id="buyCursor" class="buy">buy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <b>Grandma</b>
+      <div style="font-size:12px;color:#a0522d">bakes cookies (+1 CPS)</div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;align-items:center">
+        <div>Owned: <span id="grandmaCount">0</span></div>
+        <div>
+          <div style="font-size:12px;text-align:right">Price: <span id="grandmaPrice">100</span></div>
+          <button id="buyGrandma" class="buy">buy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <b>Farm</b>
+      <div style="font-size:12px;color:#a0522d">more cookies (+8 CPS)</div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;align-items:center">
+        <div>Owned: <span id="farmCount">0</span></div>
+        <div>
+          <div style="font-size:12px;text-align:right">Price: <span id="farmPrice">1000</span></div>
+          <button id="buyFarm" class="buy">buy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <b>Bakery</b>
+      <div style="font-size:12px;color:#a0522d">makes lots (+25 CPS)</div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;align-items:center">
+        <div>Owned: <span id="bakeryCount">0</span></div>
+        <div>
+          <div style="font-size:12px;text-align:right">Price: <span id="bakeryPrice">5000</span></div>
+          <button id="buyBakery" class="buy">buy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <b>Mine</b>
+      <div style="font-size:12px;color:#a0522d">industrial (+100 CPS)</div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;align-items:center">
+        <div>Owned: <span id="mineCount">0</span></div>
+        <div>
+          <div style="font-size:12px;text-align:right">Price: <span id="minePrice">25000</span></div>
+          <button id="buyMine" class="buy">buy</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">saved in localStorage (probably)</div>
+</div>
+
+<script>
+// messy JS
+var state = {
+  cookies: 0,
+  clickPower: 1,
+  items: {
+    cursor: { owned:0, base:15, perClick:1, cps:0 },
+    grandma: { owned:0, base:100, cps:1, perClick:0 },
+    farm: { owned:0, base:1000, cps:8, perClick:0 },
+    bakery: { owned:0, base:5000, cps:25, perClick:0 },
+    mine: { owned:0, base:25000, cps:100, perClick:0 }
+  }
+};
+
+var el = {
+  count: document.getElementById('count'),
+  cps: document.getElementById('cps'),
+  cookie: document.getElementById('cookie'),
+  cursorCount: document.getElementById('cursorCount'),
+  cursorPrice: document.getElementById('cursorPrice'),
+  grandmaCount: document.getElementById('grandmaCount'),
+  grandmaPrice: document.getElementById('grandmaPrice'),
+  farmCount: document.getElementById('farmCount'),
+  farmPrice: document.getElementById('farmPrice'),
+  bakeryCount: document.getElementById('bakeryCount'),
+  bakeryPrice: document.getElementById('bakeryPrice'),
+  mineCount: document.getElementById('mineCount'),
+  minePrice: document.getElementById('minePrice'),
+  buyCursor: document.getElementById('buyCursor'),
+  buyGrandma: document.getElementById('buyGrandma'),
+  buyFarm: document.getElementById('buyFarm'),
+  buyBakery: document.getElementById('buyBakery'),
+  buyMine: document.getElementById('buyMine')
+};
+
+// prevent copying the cookie emoji if selection contains it
+document.addEventListener('copy', function(e){
+  try {
+    var s = window.getSelection().toString();
+    if(s && s.indexOf('🍪') !== -1){
+      e.preventDefault();
+      if(window.getSelection) window.getSelection().removeAllRanges();
+    }
+  } catch(err){}
+});
+
+// stop dragging & selection on cookie
+el.cookie.addEventListener('dragstart', function(e){ e.preventDefault(); });
+el.cookie.addEventListener('mousedown', function(e){ e.preventDefault(); });
+
+// spacebar -> click (prevent page scroll)
+document.addEventListener('keydown', function(e){
+  var code = e.code || e.key;
+  if(code === 'Space' || e.keyCode === 32){
+    e.preventDefault();
+    triggerClick();
+  }
+});
+
+function triggerClick(){
+  try { if(window.getSelection) window.getSelection().removeAllRanges(); } catch(e){}
+  var add = state.clickPower + (state.items.cursor.owned * state.items.cursor.perClick);
+  state.cookies += add;
+  // tiny animation
+  el.cookie.style.transform = 'scale(.95)';
+  setTimeout(function(){ el.cookie.style.transform = ''; }, 90);
+  updateUI(); save();
+}
+
+// load/save
+function load() {
+  try {
+    var raw = localStorage.getItem('cookieclone_state');
+    if(raw) {
+      var obj = JSON.parse(raw);
+      if(typeof obj.cookies === 'number') state.cookies = obj.cookies;
+      if(obj.items && typeof obj.items === 'object') {
+        for(var k in state.items){
+          if(obj.items[k] && typeof obj.items[k].owned === 'number'){
+            state.items[k].owned = obj.items[k].owned;
+          }
+        }
+      }
+    }
+  } catch(e){ console.log('load err', e); }
+}
+function save() {
+  try { localStorage.setItem('cookieclone_state', JSON.stringify(state)); } catch(e){}
+}
+
+function price(which){
+  var it = state.items[which];
+  return Math.max(1, Math.ceil(it.base * Math.pow(1.15, it.owned)));
+}
+
+function totalCPS(){
+  var s = 0;
+  for(var k in state.items){
+    if(state.items[k].cps) s += state.items[k].cps * state.items[k].owned;
+  }
+  return s;
+}
+
+function updateUI(){
+  el.count.innerText = Math.floor(state.cookies);
+  el.cps.innerText = 'CPS: ' + totalCPS();
+  el.cursorCount.innerText = state.items.cursor.owned;
+  el.cursorPrice.innerText = price('cursor');
+  el.grandmaCount.innerText = state.items.grandma.owned;
+  el.grandmaPrice.innerText = price('grandma');
+  el.farmCount.innerText = state.items.farm.owned;
+  el.farmPrice.innerText = price('farm');
+  el.bakeryCount.innerText = state.items.bakery.owned;
+  el.bakeryPrice.innerText = price('bakery');
+  el.mineCount.innerText = state.items.mine.owned;
+  el.minePrice.innerText = price('mine');
+
+  el.buyCursor.disabled = state.cookies < price('cursor');
+  el.buyGrandma.disabled = state.cookies < price('grandma');
+  el.buyFarm.disabled = state.cookies < price('farm');
+  el.buyBakery.disabled = state.cookies < price('bakery');
+  el.buyMine.disabled = state.cookies < price('mine');
+}
+
+// click cookie (mouse)
+el.cookie.addEventListener('click', triggerClick);
+
+// buy handlers
+el.buyCursor.addEventListener('click', function(){
+  var p = price('cursor');
+  if(state.cookies >= p){
+    state.cookies -= p; state.items.cursor.owned++; updateUI(); save();
+  } else { alert('not enough cookies lol'); }
+});
+el.buyGrandma.addEventListener('click', function(){
+  var p = price('grandma');
+  if(state.cookies >= p){ state.cookies -= p; state.items.grandma.owned++; updateUI(); save(); }
+});
+el.buyFarm.addEventListener('click', function(){
+  var p = price('farm');
+  if(state.cookies >= p){ state.cookies -= p; state.items.farm.owned++; updateUI(); save(); }
+});
+el.buyBakery.addEventListener('click', function(){
+  var p = price('bakery');
+  if(state.cookies >= p){ state.cookies -= p; state.items.bakery.owned++; updateUI(); save(); }
+});
+el.buyMine.addEventListener('click', function(){
+  var p = price('mine');
+  if(state.cookies >= p){ state.cookies -= p; state.items.mine.owned++; updateUI(); save(); }
+});
+
+// passive income every second
+setInterval(function(){
+  var cps = totalCPS();
+  state.cookies += cps;
+  updateUI();
+}, 1000);
+
+// autosave
+setInterval(save, 5000);
+
+// init
+load();
+updateUI();
+</script>
+</body>
+</html>
+```// filepath: /Users/tobyschool/CookieClone.html
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>CookieClone</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+/* messy kid-made styles */
+body{background:linear-gradient(135deg,#ffefd5,#ffe4e1);font-family:"Comic Sans MS",ComicSans,Segoe UI,Arial,serif;margin:0;padding:20px}
+.box{max-width:760px;margin:10px auto;padding:16px;background:#fff6eb;border:3px dashed #ff8c00;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+.header{display:flex;justify-content:space-between;align-items:center}
+h1{margin:0;color:#b34700;font-size:26px;text-shadow:1px 1px 0 #fff}
+.small{color:#8b5a2b;font-size:13px}
+.center{display:flex;gap:12px;align-items:center;justify-content:center;margin:18px 0}
+.cookie{width:150px;height:150px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff6d1,#f4b86b);display:flex;align-items:center;justify-content:center;font-size:66px;cursor:pointer;border:6px solid rgba(0,0,0,.03);box-shadow:0 8px 6px rgba(0,0,0,.06);user-select:none;-webkit-user-select:none;-moz-user-select:none;-webkit-touch-callout:none}
+.nums{font-weight:700;color:#6b2f00;text-align:center;margin-top:8px;font-size:20px}
+.items{display:flex;gap:10px;flex-wrap:wrap}
+.item{background:#fff1e6;padding:10px;border-radius:8px;border:1px solid #ffd6b3;flex:1 1 200px}
+.item b{display:block}
+.buy{background:#ff8c00;color:white;border:0;padding:8px 10px;border-radius:6px;cursor:pointer}
+.buy:disabled{opacity:.5}
+.footer{font-size:12px;color:#8b5a2b;text-align:center;margin-top:10px}
+kbd{background:#fff;border:1px solid #ddd;padding:2px 6px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="box" id="app">
+  <div class="header">
+    <div>
+      <h1>CookieClone (super noob ver)</h1>
+      <div class="small">click cookie or press <kbd>Space</kbd>. buy things. saves in localStorage maybe.</div>
+    </div>
+    <div class="small" id="cps">CPS: 0</div>
+  </div>
+
+  <div class="center">
+    <div>
+      <div class="cookie" id="cookie" draggable="false" aria-label="cookie">🍪</div>
+      <div class="nums" id="count">0</div>
+    </div>
+  </div>
+
+  <div class="items" id="items">
+    <div class="item">
+      <b>Cursor</b>
+      <div style="font-size:12px;color:#a0522d">+1 per click</div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;align-items:center">
+        <div>Owned: <span id="cursorCount">0</span></div>
+        <div>
+          <div style="font-size:12px;text-align:right">Price: <span id="cursorPrice">15</span></div>
+          <button id="buyCursor" class="buy">buy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <b>Grandma</b>
+      <div style="font-size:12px;color:#a0522d">bakes cookies (+1 CPS)</div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;align-items:center">
+        <div>Owned: <span id="grandmaCount">0</span></div>
+        <div>
+          <div style="font-size:12px;text-align:right">Price: <span id="grandmaPrice">100</span></div>
+          <button id="buyGrandma" class="buy">buy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <b>Farm</b>
+      <div style="font-size:12px;color:#a0522d">more cookies (+8 CPS)</div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;align-items:center">
+        <div>Owned: <span id="farmCount">0</span></div>
+        <div>
+          <div style="font-size:12px;text-align:right">Price: <span id="farmPrice">1000</span></div>
+          <button id="buyFarm" class="buy">buy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <b>Bakery</b>
+      <div style="font-size:12px;color:#a0522d">makes lots (+25 CPS)</div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;align-items:center">
+        <div>Owned: <span id="bakeryCount">0</span></div>
+        <div>
+          <div style="font-size:12px;text-align:right">Price: <span id="bakeryPrice">5000</span></div>
+          <button id="buyBakery" class="buy">buy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="item">
+      <b>Mine</b>
+      <div style="font-size:12px;color:#a0522d">industrial (+100 CPS)</div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;align-items:center">
+        <div>Owned: <span id="mineCount">0</span></div>
+        <div>
+          <div style="font-size:12px;text-align:right">Price: <span id="minePrice">25000</span></div>
+          <button id="buyMine" class="buy">buy</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">saved in localStorage (probably)</div>
+</div>
+
+<script>
+// messy JS
+var state = {
+  cookies: 0,
+  clickPower: 1,
+  items: {
+    cursor: { owned:0, base:15, perClick:1, cps:0 },
+    grandma: { owned:0, base:100, cps:1, perClick:0 },
+    farm: { owned:0, base:1000, cps:8, perClick:0 },
+    bakery: { owned:0, base:5000, cps:25, perClick:0 },
+    mine: { owned:0, base:25000, cps:100, perClick:0 }
+  }
+};
+
+var el = {
+  count: document.getElementById('count'),
+  cps: document.getElementById('cps'),
+  cookie: document.getElementById('cookie'),
+  cursorCount: document.getElementById('cursorCount'),
+  cursorPrice: document.getElementById('cursorPrice'),
+  grandmaCount: document.getElementById('grandmaCount'),
+  grandmaPrice: document.getElementById('grandmaPrice'),
+  farmCount: document.getElementById('farmCount'),
+  farmPrice: document.getElementById('farmPrice'),
+  bakeryCount: document.getElementById('bakeryCount'),
+  bakeryPrice: document.getElementById('bakeryPrice'),
+  mineCount: document.getElementById('mineCount'),
+  minePrice: document.getElementById('minePrice'),
+  buyCursor: document.getElementById('buyCursor'),
+  buyGrandma: document.getElementById('buyGrandma'),
+  buyFarm: document.getElementById('buyFarm'),
+  buyBakery: document.getElementById('buyBakery'),
+  buyMine: document.getElementById('buyMine')
+};
+
+// prevent copying the cookie emoji if selection contains it
+document.addEventListener('copy', function(e){
+  try {
+    var s = window.getSelection().toString();
+    if(s && s.indexOf('🍪') !== -1){
+      e.preventDefault();
+      if(window.getSelection) window.getSelection().removeAllRanges();
+    }
+  } catch(err){}
+});
+
+// stop dragging & selection on cookie
+el.cookie.addEventListener('dragstart', function(e){ e.preventDefault(); });
+el.cookie.addEventListener('mousedown', function(e){ e.preventDefault(); });
+
+// spacebar -> click (prevent page scroll)
+document.addEventListener('keydown', function(e){
+  var code = e.code || e.key;
+  if(code === 'Space' || e.keyCode === 32){
+    e.preventDefault();
+    triggerClick();
+  }
+});
+
+function triggerClick(){
+  try { if(window.getSelection) window.getSelection().removeAllRanges(); } catch(e){}
+  var add = state.clickPower + (state.items.cursor.owned * state.items.cursor.perClick);
+  state.cookies += add;
+  // tiny animation
+  el.cookie.style.transform = 'scale(.95)';
+  setTimeout(function(){ el.cookie.style.transform = ''; }, 90);
+  updateUI(); save();
+}
+
+// load/save
+function load() {
+  try {
+    var raw = localStorage.getItem('cookieclone_state');
+    if(raw) {
+      var obj = JSON.parse(raw);
+      if(typeof obj.cookies === 'number') state.cookies = obj.cookies;
+      if(obj.items && typeof obj.items === 'object') {
+        for(var k in state.items){
+          if(obj.items[k] && typeof obj.items[k].owned === 'number'){
+            state.items[k].owned = obj.items[k].owned;
+          }
+        }
+      }
+    }
+  } catch(e){ console.log('load err', e); }
+}
+function save() {
+  try { localStorage.setItem('cookieclone_state', JSON.stringify(state)); } catch(e){}
+}
+
+function price(which){
+  var it = state.items[which];
+  return Math.max(1, Math.ceil(it.base * Math.pow(1.15, it.owned)));
+}
+
+function totalCPS(){
+  var s = 0;
+  for(var k in state.items){
+    if(state.items[k].cps) s += state.items[k].cps * state.items[k].owned;
+  }
+  return s;
+}
+
+function updateUI(){
+  el.count.innerText = Math.floor(state.cookies);
+  el.cps.innerText = 'CPS: ' + totalCPS();
+  el.cursorCount.innerText = state.items.cursor.owned;
+  el.cursorPrice.innerText = price('cursor');
+  el.grandmaCount.innerText = state.items.grandma.owned;
+  el.grandmaPrice.innerText = price('grandma');
+  el.farmCount.innerText = state.items.farm.owned;
+  el.farmPrice.innerText = price('farm');
+  el.bakeryCount.innerText = state.items.bakery.owned;
+  el.bakeryPrice.innerText = price('bakery');
+  el.mineCount.innerText = state.items.mine.owned;
+  el.minePrice.innerText = price('mine');
+
+  el.buyCursor.disabled = state.cookies < price('cursor');
+  el.buyGrandma.disabled = state.cookies < price('grandma');
+  el.buyFarm.disabled = state.cookies < price('farm');
+  el.buyBakery.disabled = state.cookies < price('bakery');
+  el.buyMine.disabled = state.cookies < price('mine');
+}
+
+// click cookie (mouse)
+el.cookie.addEventListener('click', triggerClick);
+
+// buy handlers
+el.buyCursor.addEventListener('click', function(){
+  var p = price('cursor');
+  if(state.cookies >= p){
+    state.cookies -= p; state.items.cursor.owned++; updateUI(); save();
+  } else { alert('not enough cookies lol'); }
+});
+el.buyGrandma.addEventListener('click', function(){
+  var p = price('grandma');
+  if(state.cookies >= p){ state.cookies -= p; state.items.grandma.owned++; updateUI(); save(); }
+});
+el.buyFarm.addEventListener('click', function(){
+  var p = price('farm');
+  if(state.cookies >= p){ state.cookies -= p; state.items.farm.owned++; updateUI(); save(); }
+});
+el.buyBakery.addEventListener('click', function(){
+  var p = price('bakery');
+  if(state.cookies >= p){ state.cookies -= p; state.items.bakery.owned++; updateUI(); save(); }
+});
+el.buyMine.addEventListener('click', function(){
+  var p = price('mine');
+  if(state.cookies >= p){ state.cookies -= p; state.items.mine.owned++; updateUI(); save(); }
+});
+
+// passive income every second
+setInterval(function(){
+  var cps = totalCPS();
+  state.cookies += cps;
+  updateUI();
+}, 1000);
+
+// autosave
+setInterval(save, 5000);
+
+// init
+load();
+updateUI();
+</script>
+</body>
+</html>
